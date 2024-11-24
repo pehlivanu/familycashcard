@@ -1,5 +1,8 @@
 package dev.ionelivi.cashcard;
 
+import org.springframework.data.annotation.Id;
+
+
 /**
  * Represents a cash card with an identifier and monetary amount. This immutable record provides a
  * simple data structure for cash card information.
@@ -15,7 +18,10 @@ package dev.ionelivi.cashcard;
  * </ul>
  * </p>
  * 
- * @param id The unique identifier for the cash card
+ * @param id The unique identifier for the cash card. Marked with @Id to designate it as the primary
+ *        key for database persistence. This ensures each cash card has a unique identifier, similar
+ *        to how every credit card has a unique number. The @Id annotation is required for JPA
+ *        entity mapping and typically corresponds to the primary key column in the database table.
  * @param amount The monetary value stored on the cash card
  */
 record CashCard(Long id, Double amount) {
