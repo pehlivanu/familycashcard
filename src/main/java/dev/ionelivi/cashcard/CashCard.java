@@ -24,5 +24,5 @@ import org.springframework.data.annotation.Id;
  *        entity mapping and typically corresponds to the primary key column in the database table.
  * @param amount The monetary value stored on the cash card
  */
-record CashCard(Long id, Double amount) {
+record CashCard(@Id Long id, Double amount) {
 }
