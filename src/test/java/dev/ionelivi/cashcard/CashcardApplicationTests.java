@@ -116,7 +116,8 @@ class CashcardApplicationTests {
 
 		// Send POST request to /cashcards endpoint with the new CashCard
 		// Void.class indicates we don't expect a response body
-		ResponseEntity<Void> createResponse = restTemplate.withBasicAuth("sarah1", "abc123")
+		ResponseEntity<Void> createResponse = restTemplate
+		.withBasicAuth("sarah1", "abc123")
 				.postForEntity("/cashcards", newCashCard, Void.class);
 
 		// Verify the server responded with 201 CREATED status
@@ -126,7 +127,8 @@ class CashcardApplicationTests {
 		URI locationOfNewCashCard = createResponse.getHeaders().getLocation();
 
 		// Send GET request to verify the new resource exists and is accessible
-		ResponseEntity<String> getResponse = restTemplate.withBasicAuth("sarah1", "abc123")
+		ResponseEntity<String> getResponse = restTemplate
+		        .withBasicAuth("sarah1", "abc123")
 				.getForEntity(locationOfNewCashCard, String.class);
 		assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
 
@@ -160,7 +162,8 @@ class CashcardApplicationTests {
 	@Test
 	void shouldReturnAllCashCardsWhenListIsRequested() {
 		// Make GET request to /cashcards endpoint to retrieve all cards
-		ResponseEntity<String> response = restTemplate.withBasicAuth("sarah1", "abc123")
+		ResponseEntity<String> response = restTemplate
+				.withBasicAuth("sarah1", "abc123")
 				.getForEntity("/cashcards", String.class);
 		// Verify the response status is 200 OK
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -197,7 +200,8 @@ class CashcardApplicationTests {
 	void shouldReturnAPageOfCashCards() {
 		// Make GET request with pagination parameters: page 0 (first page) and size 1 (one item per
 		// page)
-		ResponseEntity<String> response = restTemplate.withBasicAuth("sarah1", "abc123")
+		ResponseEntity<String> response = restTemplate
+				.withBasicAuth("sarah1", "abc123")
 				.getForEntity("/cashcards?page=0&size=1", String.class);
 		// Verify the response status is 200 OK
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -224,7 +228,8 @@ class CashcardApplicationTests {
 	void shouldReturnASortedPageOfCashCards() {
 		// Make GET request with pagination and sorting parameters: first page, one item, sorted by
 		// amount descending
-		ResponseEntity<String> response = restTemplate.withBasicAuth("sarah1", "abc123")
+		ResponseEntity<String> response = restTemplate
+		.withBasicAuth("sarah1", "abc123")
 				.getForEntity("/cashcards?page=0&size=1&sort=amount,desc", String.class);
 		// Verify the response status is 200 OK
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -255,7 +260,8 @@ class CashcardApplicationTests {
 	 */
 	@Test
 	void shouldReturnASortedPageOfCashCardsWithNoParametersAndUseDefaultValues() {
-		ResponseEntity<String> response = restTemplate.withBasicAuth("sarah1", "abc123")
+		ResponseEntity<String> response = restTemplate
+				.withBasicAuth("sarah1", "abc123")
 				.getForEntity("/cashcards", String.class);
 		// Verify the response status is 200 OK
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -276,13 +282,23 @@ class CashcardApplicationTests {
 
 	@Test
 	void shouldNotReturnACashCardWhenUsingBadCredentials() {
-		ResponseEntity<String> response = restTemplate.withBasicAuth("BAD-USER", "abc123")
+		ResponseEntity<String> response = restTemplate
+				.withBasicAuth("BAD-USER", "abc123")
 				.getForEntity("/cashcards/99", String.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
 
-		response = restTemplate.withBasicAuth("sarah1", "BAD-PASSWORD")
+		response = restTemplate
+		.withBasicAuth("sarah1", "BAD-PASSWORD")
 				.getForEntity("/cashcards/99", String.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+	}
+
+	@Test
+	void shouldRejectUsersWhoAreNotCardOwners() {
+		ResponseEntity<String> response = restTemplate
+				.withBasicAuth("hank-owns-no-cards", "qrs456")
+				.getForEntity("/cashcards/99", String.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
 	}
 
 
