@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import java.net.URI;
 
 
 /**
@@ -81,6 +82,54 @@ class CashcardApplicationTests {
 
 		// Verify response body is empty
 		assertThat(response.getBody()).isBlank();
+	}
+
+	/**
+	 * Tests the POST endpoint for creating a new CashCard.
+	 * Verifies that:
+	 * 1. A new CashCard can be successfully created
+	 * 2. The server responds with HTTP 201 CREATED
+	 * 3. The Location header contains the URI of the new resource
+	 * 4. The newly created resource can be retrieved via GET request
+	 *
+	 * @Test - JUnit annotation marking this as a test method
+	 */
+	@Test
+	void shouldCreateANewCashCard() {
+		// Create a new CashCard instance with null ID (server will assign) and $250 amount
+		CashCard newCashCard = new CashCard(null, 250.00);
+
+		// Send POST request to /cashcards endpoint with the new CashCard
+		// Void.class indicates we don't expect a response body
+		ResponseEntity<Void> createResponse =
+				restTemplate.postForEntity("/cashcards", newCashCard, Void.class);
+
+		// Verify the server responded with 201 CREATED status
+		assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+		// Extract the Location header which contains the URI of the new resource
+		URI locationOfNewCashCard = createResponse.getHeaders().getLocation();
+
+		// Send GET request to verify the new resource exists and is accessible
+		ResponseEntity<String> getResponse =
+				restTemplate.getForEntity(locationOfNewCashCard, String.class);
+		assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+		// Parse the JSON response body into a DocumentContext for easy data extraction
+		DocumentContext documentContext = JsonPath.parse(getResponse.getBody());
+		
+		// Extract the 'id' field from JSON using JsonPath syntax ($.id)
+		// Using Number type since ID could be Integer or Long
+		Number id = documentContext.read("$.id");
+		
+		// Extract the 'amount' field from JSON using JsonPath syntax ($.amount)
+		Double amount = documentContext.read("$.amount");
+ 
+		// Verify that the server assigned an ID (not null)
+		assertThat(id).isNotNull();
+		
+		// Verify the amount matches what we sent in the POST request
+		assertThat(amount).isEqualTo(250.00);
 	}
 
 	/**

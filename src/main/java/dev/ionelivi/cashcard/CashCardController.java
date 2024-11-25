@@ -1,11 +1,15 @@
 package dev.ionelivi.cashcard;
 
+import java.net.URI;
 import java.util.Optional;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * REST Controller for handling CashCard-related HTTP requests. Provides endpoints for managing
@@ -43,28 +47,74 @@ class CashCardController {
      * Retrieves a specific CashCard by its ID from the repository.
      * 
      * <p>
-     * This endpoint handles GET requests to fetch individual CashCard records.
-     * It uses the CashCardRepository to query the database and returns an
-     * appropriate HTTP response based on whether the card was found.
+     * This endpoint handles GET requests to fetch individual CashCard records. It uses the
+     * CashCardRepository to query the database and returns an appropriate HTTP response based on
+     * whether the card was found.
      * </p>
      *
      * @param requestedId the ID of the requested CashCard
-     * @return ResponseEntity containing:
+     * @return {@link ResponseEntity} containing:
      *         <ul>
-     *         <li>200 OK with the CashCard if found</li>
-     *         <li>404 Not Found if no CashCard exists with the given ID</li>
+     *         <li>200 OK with the CashCard if found (via {@link ResponseEntity#ok})</li>
+     *         <li>404 Not Found if no CashCard exists (via {@link ResponseEntity#notFound})</li>
      *         </ul>
      * 
-     * @see CashCardRepository#findById(Long)
+     * @see Optional#isPresent() - Checks if value exists
+     * @see Optional#get() - Retrieves the value if present
+     * @see ResponseEntity#ok(Object) - Creates response with 200 status and body
+     * @see ResponseEntity#notFound() - Creates builder for 404 response
      */
     @GetMapping("/{requestedId}")
     private ResponseEntity<CashCard> findById(@PathVariable Long requestedId) {
+        // Query the repository for the CashCard, returns Optional to handle null case
         Optional<CashCard> cashCardOptional = cashCardRepository.findById(requestedId);
+        
+        // If CashCard is found, return it with 200 OK status
         if (cashCardOptional.isPresent()) {
             return ResponseEntity.ok(cashCardOptional.get());
         } else {
+            // If no CashCard found, return 404 Not Found
             return ResponseEntity.notFound().build();
         }
+    }
+
+    /**
+     * Creates a new CashCard resource.
+     * 
+     * <p>
+     * This endpoint handles POST requests to create new CashCard records. It saves the provided
+     * CashCard data to the repository and returns the location of the newly created resource
+     * in the Location header.
+     * </p>
+     *
+     * @param newCashCardRequest the CashCard data to create, provided in request body
+     * @param ucb {@link UriComponentsBuilder} used to construct the resource URI:
+     *        <ul>
+     *        <li>{@link UriComponentsBuilder#path(String)} - Adds path segment</li>
+     *        <li>{@link UriComponentsBuilder#buildAndExpand(Object...)} - Replaces path variables</li>
+     *        </ul>
+     * @return {@link ResponseEntity} with:
+     *         <ul>
+     *         <li>201 Created status (via {@link ResponseEntity#created(URI)})</li>
+     *         <li>Location header containing {@link URI} of new resource</li>
+     *         <li>No response body (Void)</li>
+     *         </ul>
+     * 
+     * @see URI - Represents the location of the new resource
+     * @see ResponseEntity#created(URI) - Creates response with 201 status and Location header
+     */
+    @PostMapping
+    private ResponseEntity<Void> createCashCard(@RequestBody CashCard newCashCardRequest,
+            UriComponentsBuilder ucb) {
+        // Save the new CashCard to the repository
+        CashCard savedCashCard = cashCardRepository.save(newCashCardRequest);
+        
+        // Build the URI for the new resource: /cashcards/{id}
+        URI locationOfNewCashCard =
+                ucb.path("cashcards/{id}").buildAndExpand(savedCashCard.id()).toUri();
+        
+        // Return 201 Created status with Location header
+        return ResponseEntity.created(locationOfNewCashCard).build();
     }
 
 }
