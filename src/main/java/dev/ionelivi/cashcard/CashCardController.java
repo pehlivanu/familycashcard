@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.security.Principal;
 import java.util.*;
 
 /**
@@ -65,9 +66,10 @@ class CashCardController {
      * @see ResponseEntity#notFound() - Creates builder for 404 response
      */
     @GetMapping("/{requestedId}")
-    private ResponseEntity<CashCard> findById(@PathVariable Long requestedId) {
+    private ResponseEntity<CashCard> findById(@PathVariable Long requestedId, Principal principal) {
         // Query the repository for the CashCard, returns Optional to handle null case
-        Optional<CashCard> cashCardOptional = cashCardRepository.findById(requestedId);
+        Optional<CashCard> cashCardOptional = Optional
+                .ofNullable(cashCardRepository.findByIdAndOwner(requestedId, principal.getName()));
         
         // If CashCard is found, return it with 200 OK status
         if (cashCardOptional.isPresent()) {
@@ -105,9 +107,13 @@ class CashCardController {
      */
     @PostMapping
     private ResponseEntity<Void> createCashCard(@RequestBody CashCard newCashCardRequest,
-            UriComponentsBuilder ucb) {
+            UriComponentsBuilder ucb, Principal principal) {
+        CashCard cashCardWithOwner =
+                new CashCard(null, newCashCardRequest.amount(), principal.getName());
+    
+  
         // Save the new CashCard to the repository
-        CashCard savedCashCard = cashCardRepository.save(newCashCardRequest);
+        CashCard savedCashCard = cashCardRepository.save(cashCardWithOwner);
         
         // Build the URI for the new resource: /cashcards/{id}
         URI locationOfNewCashCard =
@@ -118,8 +124,8 @@ class CashCardController {
     }
 
     @GetMapping
-    private ResponseEntity<List<CashCard>> findAll(Pageable pageable) {
-        Page<CashCard> page = cashCardRepository.findAll(
+    private ResponseEntity<List<CashCard>> findAll(Pageable pageable, Principal principal) {
+        Page<CashCard> page = cashCardRepository.findByOwner(principal.getName(),
             PageRequest.of(
                 pageable.getPageNumber(),
                 pageable.getPageSize(), 

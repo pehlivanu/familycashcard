@@ -1,5 +1,7 @@
 package dev.ionelivi.cashcard;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.PagingAndSortingRepository;
 
@@ -30,5 +32,6 @@ import org.springframework.data.repository.PagingAndSortingRepository;
  * entity class and the methods defined in this interface.
  */
 interface CashCardRepository extends CrudRepository<CashCard, Long>, PagingAndSortingRepository<CashCard, Long> {
-    // No additional methods needed, as CrudRepository provides the basic CRUD operations
+    CashCard findByIdAndOwner(Long id, String owner);
+    Page<CashCard> findByOwner(String owner, PageRequest pageRequest);
 }

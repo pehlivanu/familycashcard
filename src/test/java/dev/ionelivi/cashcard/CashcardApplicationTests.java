@@ -117,7 +117,7 @@ class CashcardApplicationTests {
 		// Send POST request to /cashcards endpoint with the new CashCard
 		// Void.class indicates we don't expect a response body
 		ResponseEntity<Void> createResponse = restTemplate
-		.withBasicAuth("sarah1", "abc123")
+				.withBasicAuth("sarah1", "abc123")
 				.postForEntity("/cashcards", newCashCard, Void.class);
 
 		// Verify the server responded with 201 CREATED status
@@ -299,6 +299,13 @@ class CashcardApplicationTests {
 				.withBasicAuth("hank-owns-no-cards", "qrs456")
 				.getForEntity("/cashcards/99", String.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+	}
+
+	@Test
+	void shouldNotAllowAccessToCashCardsTheyDoNotOwn() {
+		ResponseEntity<String> response = restTemplate.withBasicAuth("sarah1", "abc123")
+				.getForEntity("/cashcards/102", String.class); // kumar2's data
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
 	}
 
 
