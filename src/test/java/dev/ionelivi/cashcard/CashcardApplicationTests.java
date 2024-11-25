@@ -1,5 +1,6 @@
 package dev.ionelivi.cashcard;
 
+import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import com.jayway.jsonpath.DocumentContext;
@@ -27,7 +28,7 @@ import java.net.URI;
  * @see org.springframework.test.annotation.DirtiesContext
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
+//@DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
 class CashcardApplicationTests {
 
 	/**
@@ -40,9 +41,8 @@ class CashcardApplicationTests {
 	TestRestTemplate restTemplate;
 
 	/**
-	 * Tests the GET endpoint for retrieving a specific CashCard. Verifies that: 
-	 * 1. The endpoint returns HTTP 200 OK for existing cards 
-	 * 2. The response contains the expected CashCard data 
+	 * Tests the GET endpoint for retrieving a specific CashCard. Verifies that: 1. The endpoint
+	 * returns HTTP 200 OK for existing cards 2. The response contains the expected CashCard data
 	 * 3.The JSON structure matches the expected format
 	 *
 	 * @Test - JUnit annotation marking this as a test method
@@ -68,14 +68,12 @@ class CashcardApplicationTests {
 	}
 
 	/**
-	 * Tests the error handling for non-existent CashCard requests.
-	 * Verifies that:
-	 * 1. The endpoint returns HTTP 404 NOT_FOUND for non-existent card IDs
-	 * 2. The response body is empty as expected
-	 * 3. The error handling follows REST best practices
+	 * Tests the error handling for non-existent CashCard requests. Verifies that: 1. The endpoint
+	 * returns HTTP 404 NOT_FOUND for non-existent card IDs 2. The response body is empty as
+	 * expected 3. The error handling follows REST best practices
 	 *
-	 * This test ensures proper handling of negative scenarios where requested
-	 * resources don't exist in the system.
+	 * This test ensures proper handling of negative scenarios where requested resources don't exist
+	 * in the system.
 	 *
 	 * @Test - JUnit annotation marking this as a test method
 	 * @see org.springframework.boot.test.web.client.TestRestTemplate#getForEntity
@@ -84,7 +82,8 @@ class CashcardApplicationTests {
 	@Test
 	void shouldNotReturnACashCardWithAnUnknownId() {
 		// Make GET request to /cashcards/1000 endpoint for a non-existent card
-		ResponseEntity<String> response = restTemplate.getForEntity("/cashcards/1000", String.class);
+		ResponseEntity<String> response =
+				restTemplate.getForEntity("/cashcards/1000", String.class);
 
 		// Verify HTTP status code is 404 NOT_FOUND
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -94,12 +93,10 @@ class CashcardApplicationTests {
 	}
 
 	/**
-	 * Tests the POST endpoint for creating a new CashCard.
-	 * Verifies that:
-	 * 1. A new CashCard can be successfully created
-	 * 2. The server responds with HTTP 201 CREATED
-	 * 3. The Location header contains the URI of the new resource
-	 * 4. The newly created resource can be retrieved via GET request
+	 * Tests the POST endpoint for creating a new CashCard. Verifies that: 1. A new CashCard can be
+	 * successfully created 2. The server responds with HTTP 201 CREATED 3. The Location header
+	 * contains the URI of the new resource 4. The newly created resource can be retrieved via GET
+	 * request
 	 *
 	 * @Test - JUnit annotation marking this as a test method
 	 * @see org.springframework.boot.test.web.client.TestRestTemplate#postForEntity
@@ -108,7 +105,7 @@ class CashcardApplicationTests {
 	 * @see com.jayway.jsonpath.JsonPath
 	 */
 	@Test
-	//@DirtiesContext
+	@DirtiesContext
 	void shouldCreateANewCashCard() {
 		// Create a new CashCard instance with null ID (server will assign) and $250 amount
 		CashCard newCashCard = new CashCard(null, 250.00);
@@ -131,20 +128,46 @@ class CashcardApplicationTests {
 
 		// Parse the JSON response body into a DocumentContext for easy data extraction
 		DocumentContext documentContext = JsonPath.parse(getResponse.getBody());
-		
+
 		// Extract the 'id' field from JSON using JsonPath syntax ($.id)
 		// Using Number type since ID could be Integer or Long
 		Number id = documentContext.read("$.id");
-		
+
 		// Extract the 'amount' field from JSON using JsonPath syntax ($.amount)
 		Double amount = documentContext.read("$.amount");
- 
+
 		// Verify that the server assigned an ID (not null)
 		assertThat(id).isNotNull();
-		
+
 		// Verify the amount matches what we sent in the POST request
 		assertThat(amount).isEqualTo(250.00);
 	}
+
+	@Test
+	void shouldReturnAllCashCardsWhenListIsRequested() {
+		ResponseEntity<String> response = restTemplate.getForEntity("/cashcards", String.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+		DocumentContext documentContext = JsonPath.parse(response.getBody());
+		int cashCardCount = documentContext.read("$.length()");
+		assertThat(cashCardCount).isEqualTo(3);
+
+		JSONArray ids = documentContext.read("$..id");
+		assertThat(ids).containsExactlyInAnyOrder(99, 100, 101);
+
+		JSONArray amounts = documentContext.read("$..amount");
+		assertThat(amounts).containsExactlyInAnyOrder(123.45, 1.0, 150.00);
+	}
+
+	@Test
+    void shouldReturnAPageOfCashCards() {
+        ResponseEntity<String> response = restTemplate.getForEntity("/cashcards?page=0&size=1", String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        DocumentContext documentContext = JsonPath.parse(response.getBody());
+        JSONArray page = documentContext.read("$[*]");
+        assertThat(page.size()).isEqualTo(1);
+    }
 
 	/**
 	 * Verifies that the Spring application context loads successfully. This test will fail if: -

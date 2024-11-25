@@ -1,6 +1,7 @@
 package dev.ionelivi.cashcard;
 
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.PagingAndSortingRepository;
 
 /**
  * Repository interface for {@link CashCard} entities.
@@ -28,6 +29,6 @@ import org.springframework.data.repository.CrudRepository;
  * Spring Data JPA will generate the implementation of this interface at runtime, based on the
  * entity class and the methods defined in this interface.
  */
-public interface CashCardRepository extends CrudRepository<CashCard, Long> {
+interface CashCardRepository extends CrudRepository<CashCard, Long>, PagingAndSortingRepository<CashCard, Long> {
     // No additional methods needed, as CrudRepository provides the basic CRUD operations
 }
