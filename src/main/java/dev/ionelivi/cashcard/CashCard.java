@@ -22,6 +22,7 @@ import org.springframework.data.annotation.Id;
  * <ul>
  * <li>{@code id} - Unique identifier, maps to database primary key</li>
  * <li>{@code amount} - Monetary value as {@link Double}</li>
+ * <li>{@code owner} - The owner of the cash card</li>
  * </ul>
  * </p>
  *
@@ -33,7 +34,8 @@ import org.springframework.data.annotation.Id;
  *        to how every credit card has a unique number. The {@link Id} annotation is required for JPA
  *        entity mapping and typically corresponds to the primary key column in the database table.
  * @param amount The monetary value stored on the cash card
+ * @param owner The username or identifier of the person who owns this cash card
  */
-record CashCard(@Id Long id, Double amount,String owner) {
+record CashCard(@Id Long id, Double amount, String owner) {
 }
 

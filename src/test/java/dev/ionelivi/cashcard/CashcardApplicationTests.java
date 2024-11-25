@@ -280,27 +280,63 @@ class CashcardApplicationTests {
 		assertThat(amounts).containsExactly(1.0, 123.45, 150.00);
 	}
 
+	/**
+	 * Tests authentication failure scenarios with invalid credentials.
+	 * Verifies that:
+	 * 1. The endpoint returns HTTP 401 UNAUTHORIZED for invalid username
+	 * 2. The endpoint returns HTTP 401 UNAUTHORIZED for invalid password
+	 * 3. The security system properly validates credentials
+	 *
+	 * @Test - JUnit annotation marking this as a test method
+	 * @see org.springframework.boot.test.web.client.TestRestTemplate#withBasicAuth
+	 * @see org.springframework.http.HttpStatus#UNAUTHORIZED
+	 */
 	@Test
 	void shouldNotReturnACashCardWhenUsingBadCredentials() {
+		// Make GET request with invalid username
 		ResponseEntity<String> response = restTemplate
 				.withBasicAuth("BAD-USER", "abc123")
 				.getForEntity("/cashcards/99", String.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
 
+		// Make GET request with invalid password
 		response = restTemplate
-		.withBasicAuth("sarah1", "BAD-PASSWORD")
+				.withBasicAuth("sarah1", "BAD-PASSWORD")
 				.getForEntity("/cashcards/99", String.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
 	}
 
+	/**
+	 * Tests authorization failure for users without the CARD-OWNER role.
+	 * Verifies that:
+	 * 1. The endpoint returns HTTP 403 FORBIDDEN for non-card-owners
+	 * 2. Role-based access control is properly enforced
+	 * 3. Users without proper roles cannot access any card data
+	 *
+	 * @Test - JUnit annotation marking this as a test method
+	 * @see org.springframework.boot.test.web.client.TestRestTemplate#withBasicAuth
+	 * @see org.springframework.http.HttpStatus#FORBIDDEN
+	 */
 	@Test
 	void shouldRejectUsersWhoAreNotCardOwners() {
+		// Make GET request with user who has no CARD-OWNER role
 		ResponseEntity<String> response = restTemplate
 				.withBasicAuth("hank-owns-no-cards", "qrs456")
 				.getForEntity("/cashcards/99", String.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
 	}
 
+	/**
+	 * Tests data isolation between users attempting to access cards they don't own.
+	 * Verifies that:
+	 * 1. The endpoint returns HTTP 404 NOT_FOUND for cards
+	 * 2. Users cannot access cards they don't own
+	 * 3. The system properly isolates data between users
+	 *
+	 * @Test - JUnit annotation marking this as a test method
+	 * @see org.springframework.boot.test.web.client.TestRestTemplate#getForEntity
+	 * @see org.springframework.http.HttpStatus#NOT_FOUND
+	 */
 	@Test
 	void shouldNotAllowAccessToCashCardsTheyDoNotOwn() {
 		ResponseEntity<String> response = restTemplate.withBasicAuth("sarah1", "abc123")

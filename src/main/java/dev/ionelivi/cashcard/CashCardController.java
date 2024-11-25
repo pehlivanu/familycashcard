@@ -54,6 +54,7 @@ class CashCardController {
      * </p>
      *
      * @param requestedId the ID of the requested CashCard
+     * @param principal {@link java.security.Principal} the authenticated user's principal containing ownership information
      * @return {@link ResponseEntity} containing:
      *         <ul>
      *         <li>200 OK with the CashCard if found (via {@link ResponseEntity#ok})</li>
@@ -67,7 +68,7 @@ class CashCardController {
      */
     @GetMapping("/{requestedId}")
     private ResponseEntity<CashCard> findById(@PathVariable Long requestedId, Principal principal) {
-        // Query the repository for the CashCard, returns Optional to handle null case
+        // Query the repository for the CashCard by ID and owner, returns Optional to handle null case
         Optional<CashCard> cashCardOptional = Optional
                 .ofNullable(cashCardRepository.findByIdAndOwner(requestedId, principal.getName()));
         
@@ -95,6 +96,7 @@ class CashCardController {
      *        <li>{@link UriComponentsBuilder#path(String)} - Adds path segment</li>
      *        <li>{@link UriComponentsBuilder#buildAndExpand(Object...)} - Replaces path variables</li>
      *        </ul>
+     * @param principal {@link java.security.Principal} the authenticated user's principal for setting card ownership
      * @return {@link ResponseEntity} with:
      *         <ul>
      *         <li>201 Created status (via {@link ResponseEntity#created(URI)})</li>
@@ -108,10 +110,10 @@ class CashCardController {
     @PostMapping
     private ResponseEntity<Void> createCashCard(@RequestBody CashCard newCashCardRequest,
             UriComponentsBuilder ucb, Principal principal) {
+        // Create a new CashCard with the owner set to the authenticated user's principal
         CashCard cashCardWithOwner =
                 new CashCard(null, newCashCardRequest.amount(), principal.getName());
     
-  
         // Save the new CashCard to the repository
         CashCard savedCashCard = cashCardRepository.save(cashCardWithOwner);
         
@@ -123,14 +125,30 @@ class CashCardController {
         return ResponseEntity.created(locationOfNewCashCard).build();
     }
 
+    /**
+     * Retrieves all CashCards owned by the authenticated user with pagination and sorting support.
+     *
+     * @param pageable {@link org.springframework.data.domain.Pageable} contains pagination
+     * @param principal the authenticated user's principal for filtering owned cards
+     * @return {@link ResponseEntity} containing:
+     *         <ul>
+     *         <li>200 OK with the list of CashCards if found</li>
+     *         <li>Empty list if no CashCards exist for the user</li>
+     *         </ul>
+     */
     @GetMapping
     private ResponseEntity<List<CashCard>> findAll(Pageable pageable, Principal principal) {
+        // Query the repository for CashCards by owner, with pagination and sorting support
         Page<CashCard> page = cashCardRepository.findByOwner(principal.getName(),
             PageRequest.of(
+                // 
                 pageable.getPageNumber(),
+                // Number of items per page
                 pageable.getPageSize(), 
+                // Sort by amount in ascending order if not specified
                 pageable.getSortOr(Sort.by(Sort.Direction.ASC, "amount"))
             ));
+        // Return 200 OK with the list of CashCards
         return ResponseEntity.ok(page.getContent());
     }
 
