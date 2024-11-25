@@ -50,7 +50,8 @@ class CashcardApplicationTests {
 	@Test
 	void shouldReturnACashCardWhenDataIsSaved() {
 		// Make GET request to /cashcards/99 endpoint
-		ResponseEntity<String> response = restTemplate.getForEntity("/cashcards/99", String.class);
+		ResponseEntity<String> response = restTemplate.withBasicAuth("sarah1", "abc123")
+				.getForEntity("/cashcards/99", String.class);
 
 		// Verify HTTP status code is 200 OK
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -79,8 +80,8 @@ class CashcardApplicationTests {
 	@Test
 	void shouldNotReturnACashCardWithAnUnknownId() {
 		// Make GET request to /cashcards/1000 endpoint for a non-existent card
-		ResponseEntity<String> response =
-				restTemplate.getForEntity("/cashcards/1000", String.class);
+		ResponseEntity<String> response = restTemplate.withBasicAuth("sarah1", "abc123")
+				.getForEntity("/cashcards/1000", String.class);
 
 		// Verify HTTP status code is 404 NOT_FOUND
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -96,10 +97,10 @@ class CashcardApplicationTests {
 	 * request
 	 *
 	 * @Test - JUnit annotation marking this as a test method
-	 * @DirtiesContext - Indicates that the Spring ApplicationContext should be reset after this test.
-	 *                   This is necessary because the test modifies the application state by adding
-	 *                   a new CashCard to the database. Without this annotation, subsequent tests
-	 *                   might fail due to the modified state.
+	 * @DirtiesContext - Indicates that the Spring ApplicationContext should be reset after this
+	 *                 test. This is necessary because the test modifies the application state by
+	 *                 adding a new CashCard to the database. Without this annotation, subsequent
+	 *                 tests might fail due to the modified state.
 	 * 
 	 * @see org.springframework.boot.test.web.client.TestRestTemplate#postForEntity
 	 * @see org.springframework.http.ResponseEntity
@@ -111,12 +112,12 @@ class CashcardApplicationTests {
 	@DirtiesContext
 	void shouldCreateANewCashCard() {
 		// Create a new CashCard instance with null ID (server will assign) and $250 amount
-		CashCard newCashCard = new CashCard(null, 250.00);
+		CashCard newCashCard = new CashCard(null, 250.00, "sarah1");
 
 		// Send POST request to /cashcards endpoint with the new CashCard
 		// Void.class indicates we don't expect a response body
-		ResponseEntity<Void> createResponse =
-				restTemplate.postForEntity("/cashcards", newCashCard, Void.class);
+		ResponseEntity<Void> createResponse = restTemplate.withBasicAuth("sarah1", "abc123")
+				.postForEntity("/cashcards", newCashCard, Void.class);
 
 		// Verify the server responded with 201 CREATED status
 		assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -125,8 +126,8 @@ class CashcardApplicationTests {
 		URI locationOfNewCashCard = createResponse.getHeaders().getLocation();
 
 		// Send GET request to verify the new resource exists and is accessible
-		ResponseEntity<String> getResponse =
-				restTemplate.getForEntity(locationOfNewCashCard, String.class);
+		ResponseEntity<String> getResponse = restTemplate.withBasicAuth("sarah1", "abc123")
+				.getForEntity(locationOfNewCashCard, String.class);
 		assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
 
 		// Parse the JSON response body into a DocumentContext for easy data extraction
@@ -147,11 +148,9 @@ class CashcardApplicationTests {
 	}
 
 	/**
-	 * Tests the GET endpoint for retrieving all CashCards. Verifies that:
-	 * 1. The endpoint returns HTTP 200 OK
-	 * 2. The correct number of CashCards is returned
-	 * 3. The response contains the expected IDs and amounts
-	 * 4. The data matches the pre-configured test dataset
+	 * Tests the GET endpoint for retrieving all CashCards. Verifies that: 1. The endpoint returns
+	 * HTTP 200 OK 2. The correct number of CashCards is returned 3. The response contains the
+	 * expected IDs and amounts 4. The data matches the pre-configured test dataset
 	 *
 	 * @Test - JUnit annotation marking this as a test method
 	 * @see org.springframework.boot.test.web.client.TestRestTemplate#getForEntity
@@ -161,7 +160,8 @@ class CashcardApplicationTests {
 	@Test
 	void shouldReturnAllCashCardsWhenListIsRequested() {
 		// Make GET request to /cashcards endpoint to retrieve all cards
-		ResponseEntity<String> response = restTemplate.getForEntity("/cashcards", String.class);
+		ResponseEntity<String> response = restTemplate.withBasicAuth("sarah1", "abc123")
+				.getForEntity("/cashcards", String.class);
 		// Verify the response status is 200 OK
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
@@ -184,10 +184,9 @@ class CashcardApplicationTests {
 	}
 
 	/**
-	 * Tests the pagination functionality of the CashCards endpoint. Verifies that:
-	 * 1. The endpoint returns HTTP 200 OK
-	 * 2. The response contains the requested page size
-	 * 3. Pagination parameters are correctly processed
+	 * Tests the pagination functionality of the CashCards endpoint. Verifies that: 1. The endpoint
+	 * returns HTTP 200 OK 2. The response contains the requested page size 3. Pagination parameters
+	 * are correctly processed
 	 *
 	 * @Test - JUnit annotation marking this as a test method
 	 * @see org.springframework.boot.test.web.client.TestRestTemplate#getForEntity
@@ -196,8 +195,10 @@ class CashcardApplicationTests {
 	 */
 	@Test
 	void shouldReturnAPageOfCashCards() {
-		// Make GET request with pagination parameters: page 0 (first page) and size 1 (one item per page)
-		ResponseEntity<String> response = restTemplate.getForEntity("/cashcards?page=0&size=1", String.class);
+		// Make GET request with pagination parameters: page 0 (first page) and size 1 (one item per
+		// page)
+		ResponseEntity<String> response = restTemplate.withBasicAuth("sarah1", "abc123")
+				.getForEntity("/cashcards?page=0&size=1", String.class);
 		// Verify the response status is 200 OK
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
@@ -210,11 +211,9 @@ class CashcardApplicationTests {
 	}
 
 	/**
-	 * Tests the sorting functionality combined with pagination. Verifies that:
-	 * 1. The endpoint returns HTTP 200 OK
-	 * 2. The response is correctly sorted by amount in descending order
-	 * 3. The page size is respected
-	 * 4. The first result matches the expected highest amount
+	 * Tests the sorting functionality combined with pagination. Verifies that: 1. The endpoint
+	 * returns HTTP 200 OK 2. The response is correctly sorted by amount in descending order 3. The
+	 * page size is respected 4. The first result matches the expected highest amount
 	 *
 	 * @Test - JUnit annotation marking this as a test method
 	 * @see org.springframework.boot.test.web.client.TestRestTemplate#getForEntity
@@ -223,9 +222,10 @@ class CashcardApplicationTests {
 	 */
 	@Test
 	void shouldReturnASortedPageOfCashCards() {
-		// Make GET request with pagination and sorting parameters: first page, one item, sorted by amount descending
-		ResponseEntity<String> response = restTemplate.getForEntity("/cashcards?page=0&size=1&sort=amount,desc",
-				String.class);
+		// Make GET request with pagination and sorting parameters: first page, one item, sorted by
+		// amount descending
+		ResponseEntity<String> response = restTemplate.withBasicAuth("sarah1", "abc123")
+				.getForEntity("/cashcards?page=0&size=1&sort=amount,desc", String.class);
 		// Verify the response status is 200 OK
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
@@ -243,12 +243,10 @@ class CashcardApplicationTests {
 	}
 
 	/**
-	 * Tests the default behavior of the CashCards endpoint when no parameters are provided. 
-	 * Verifies that:
-	 * 1. The endpoint returns HTTP 200 OK
-	 * 2. Default pagination and sorting are applied correctly
-	 * 3. Results are sorted by amount in ascending order
-	 * 4. All available CashCards are returned in the correct order
+	 * Tests the default behavior of the CashCards endpoint when no parameters are provided.
+	 * Verifies that: 1. The endpoint returns HTTP 200 OK 2. Default pagination and sorting are
+	 * applied correctly 3. Results are sorted by amount in ascending order 4. All available
+	 * CashCards are returned in the correct order
 	 *
 	 * @Test - JUnit annotation marking this as a test method
 	 * @see org.springframework.boot.test.web.client.TestRestTemplate#getForEntity
@@ -257,8 +255,8 @@ class CashcardApplicationTests {
 	 */
 	@Test
 	void shouldReturnASortedPageOfCashCardsWithNoParametersAndUseDefaultValues() {
-		// Make GET request to /cashcards endpoint without any pagination or sorting parameters
-		ResponseEntity<String> response = restTemplate.getForEntity("/cashcards", String.class);
+		ResponseEntity<String> response = restTemplate.withBasicAuth("sarah1", "abc123")
+				.getForEntity("/cashcards", String.class);
 		// Verify the response status is 200 OK
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
@@ -275,6 +273,18 @@ class CashcardApplicationTests {
 		// Expected order: 1.0 (smallest), 123.45 (middle), 150.00 (largest)
 		assertThat(amounts).containsExactly(1.0, 123.45, 150.00);
 	}
+
+	@Test
+	void shouldNotReturnACashCardWhenUsingBadCredentials() {
+		ResponseEntity<String> response = restTemplate.withBasicAuth("BAD-USER", "abc123")
+				.getForEntity("/cashcards/99", String.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+		response = restTemplate.withBasicAuth("sarah1", "BAD-PASSWORD")
+				.getForEntity("/cashcards/99", String.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+	}
+
 
 	/**
 	 * Verifies that the Spring application context loads successfully. This test will fail if: -
