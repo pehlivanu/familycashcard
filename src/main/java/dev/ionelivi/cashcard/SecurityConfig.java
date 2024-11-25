@@ -123,8 +123,14 @@ class SecurityConfig {
                     .encode("qrs456"))              // Original password
                 .roles("NON-OWNER")                 // Assign NON-OWNER role
                 .build();                           // Create the UserDetails object
+
+        UserDetails kumar = users
+                .username("kumar2")
+                .password(passwordEncoder.encode("xyz789"))
+                .roles("CARD-OWNER")
+                .build();        
         
         // Return an InMemoryUserDetailsManager containing both users
-        return new InMemoryUserDetailsManager(sarah, hankOwnsNoCards);
+        return new InMemoryUserDetailsManager(sarah, hankOwnsNoCards, kumar);
     }
 }

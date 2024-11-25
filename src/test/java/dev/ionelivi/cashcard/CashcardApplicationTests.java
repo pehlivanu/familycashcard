@@ -7,6 +7,8 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
@@ -339,11 +341,160 @@ class CashcardApplicationTests {
 	 */
 	@Test
 	void shouldNotAllowAccessToCashCardsTheyDoNotOwn() {
-		ResponseEntity<String> response = restTemplate.withBasicAuth("sarah1", "abc123")
+		ResponseEntity<String> response = restTemplate
+				.withBasicAuth("sarah1", "abc123")
 				.getForEntity("/cashcards/102", String.class); // kumar2's data
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
 	}
 
+	/**
+	 * Tests the PUT endpoint for updating an existing CashCard.
+	 * Verifies that:
+	 * 1. An authenticated user can update their own CashCard
+	 * 2. The server responds with HTTP 204 NO_CONTENT on successful update
+	 * 3. Only the amount field can be modified while preserving ownership
+	 *
+	 * @Test - JUnit annotation marking this as a test method
+	 * @DirtiesContext - Indicates that the Spring ApplicationContext should be reset after
+	 *                   this test because it modifies the application state
+	 * @see org.springframework.boot.test.web.client.TestRestTemplate#exchange
+	 * @see org.springframework.http.HttpMethod#PUT
+	 * @see org.springframework.http.HttpStatus#NO_CONTENT
+	 */
+	@Test
+	@DirtiesContext
+	void shouldUpdateAnExistingCashCard() {
+		// Create CashCard update request with new amount
+		// Note: null ID and owner fields ensure these cannot be modified
+		CashCard cashCardUpdate = new CashCard(null, 19.99, null);
+		
+		// Create HTTP entity containing the update request
+		HttpEntity<CashCard> request = new HttpEntity<>(cashCardUpdate);
+		
+		// Send PUT request to update CashCard #99 with authentication
+		ResponseEntity<Void> response = restTemplate
+				.withBasicAuth("sarah1", "abc123")
+				.exchange("/cashcards/99", HttpMethod.PUT, request, Void.class);
+		
+		// Verify the update was successful (204 NO_CONTENT)
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+		// Verify the updated CashCard by making a GET request
+		ResponseEntity<String> getResponse = restTemplate
+				.withBasicAuth("sarah1", "abc123")
+				.getForEntity("/cashcards/99", String.class);
+		// Confirm successful retrieval
+		assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+		
+		// Parse and validate the updated CashCard data
+		DocumentContext documentContext = JsonPath.parse(getResponse.getBody());
+		Number id = documentContext.read("$.id");
+		Double amount = documentContext.read("$.amount");
+		// Verify ID remains unchanged
+		assertThat(id).isEqualTo(99);
+		// Verify amount was updated to new value
+		assertThat(amount).isEqualTo(19.99);
+	}
+
+	/**
+	 * Tests attempting to update a non-existent CashCard.
+	 * Verifies that the system properly handles requests for invalid card IDs
+	 * by returning a NOT_FOUND status.
+	 */
+	@Test
+	void shouldNotUpdateACashCardThatDoesNotExist() {
+		// Create update request for non-existent card
+		CashCard unknownCard = new CashCard(null, 19.99, null);
+		HttpEntity<CashCard> request = new HttpEntity<>(unknownCard);
+		
+		// Attempt to update card with ID that doesn't exist
+		ResponseEntity<Void> response = restTemplate.withBasicAuth("sarah1", "abc123")
+				.exchange("/cashcards/99999", HttpMethod.PUT, request, Void.class);
+		// Verify request fails with NOT_FOUND status
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+	}
+
+	/**
+	 * Tests data isolation by attempting to update a CashCard owned by another user.
+	 * Verifies that users cannot modify CashCards they don't own, maintaining
+	 * proper data security and isolation.
+	 */
+	@Test
+	void shouldNotUpdateACashCardThatIsOwnedBySomeoneElse() {
+		// Create update request for card owned by kumar2 (ID 102)
+		CashCard kumarsCard = new CashCard(null, 333.33, null);
+		HttpEntity<CashCard> request = new HttpEntity<>(kumarsCard);
+		
+		// Attempt to update kumar2's card using sarah1's credentials
+		ResponseEntity<Void> response = restTemplate
+				.withBasicAuth("sarah1", "abc123")
+				.exchange("/cashcards/102", HttpMethod.PUT, request, Void.class);
+		// Verify request fails with NOT_FOUND status (system doesn't reveal card ownership)
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+	}
+
+	/**
+	 * Tests the successful deletion of an existing CashCard.
+	 * Verifies that:
+	 * 1. The DELETE request returns 204 NO_CONTENT
+	 * 2. The deleted card cannot be retrieved afterwards (404 NOT_FOUND)
+	 */
+	@Test
+	@DirtiesContext  // Reset application context after test since we're modifying data
+	void shouldDeleteAnExistingCashCard() {
+		// Attempt to delete CashCard #99 owned by sarah1
+		ResponseEntity<Void> response = restTemplate
+				.withBasicAuth("sarah1", "abc123")
+				.exchange("/cashcards/99", HttpMethod.DELETE, null, Void.class);
+		// Verify deletion was successful
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+		// Attempt to retrieve the deleted card to confirm it's gone
+		ResponseEntity<String> getResponse = restTemplate
+				.withBasicAuth("sarah1", "abc123")
+				.getForEntity("/cashcards/99", String.class);
+		// Verify the card no longer exists
+		assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+	}
+
+	/**
+	 * Tests deletion attempt of a non-existent CashCard.
+	 * Verifies that attempting to delete a card with an invalid ID
+	 * returns 404 NOT_FOUND status.
+	 */
+	@Test
+	void shouldNotDeleteACashCardThatDoesNotExist() {
+		// Attempt to delete non-existent CashCard
+		ResponseEntity<Void> deleteResponse = restTemplate
+				.withBasicAuth("sarah1", "abc123")
+				.exchange("/cashcards/99999", HttpMethod.DELETE, null, Void.class);
+		// Verify request fails with NOT_FOUND
+		assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+	}
+
+	/**
+	 * Tests data isolation by attempting to delete another user's CashCard.
+	 * Verifies that:
+	 * 1. User cannot delete cards they don't own (returns 404 NOT_FOUND)
+	 * 2. The target card remains accessible to its actual owner
+	 * Note: Returns 404 instead of 403 to avoid revealing card ownership
+	 */
+	@Test
+	void shouldNotAllowDeletionOfCashCardsTheyDoNotOwn() {
+		// Attempt to delete kumar2's card (#102) using sarah1's credentials
+		ResponseEntity<Void> deleteResponse = restTemplate
+				.withBasicAuth("sarah1", "abc123")
+				.exchange("/cashcards/102", HttpMethod.DELETE, null, Void.class);
+		// Verify deletion attempt fails
+		assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+		// Verify kumar2 can still access their card
+		ResponseEntity<String> getResponse = restTemplate
+				.withBasicAuth("kumar2", "xyz789")
+				.getForEntity("/cashcards/102", String.class);
+		// Confirm card still exists and is accessible to its owner
+		assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+	}
 
 	/**
 	 * Verifies that the Spring application context loads successfully. This test will fail if: -

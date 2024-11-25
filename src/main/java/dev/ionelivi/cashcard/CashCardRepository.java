@@ -68,4 +68,24 @@ interface CashCardRepository extends CrudRepository<CashCard, Long>, PagingAndSo
      * @return a {@link Page} containing the CashCards owned by the specified user
      */
     Page<CashCard> findByOwner(String owner, PageRequest pageRequest);
+
+    /**
+     * Checks if a CashCard exists and belongs to the specified owner.
+     * 
+     * <p>
+     * This method is crucial for security purposes:
+     * <ul>
+     *   <li>Prevents unauthorized deletions by validating both existence AND ownership</li>
+     *   <li>Implements the principle of least privilege by only allowing owners to modify their data</li>
+     *   <li>Prevents information disclosure by not revealing if a card exists when owned by another user</li>
+     *   <li>Provides atomic verification, avoiding race conditions between checking and deleting</li>
+     *   <li>Helps maintain data isolation between users in a multi-tenant system</li>
+     * </ul>
+     * </p>
+     *
+     * @param id the unique identifier of the CashCard
+     * @param owner the username of the purported owner
+     * @return true if the CashCard exists AND belongs to the specified owner, false otherwise
+     */
+    boolean existsByIdAndOwner(Long id, String owner);
 }

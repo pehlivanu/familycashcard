@@ -61,20 +61,17 @@ class CashCardController {
      *         <li>404 Not Found if no CashCard exists (via {@link ResponseEntity#notFound})</li>
      *         </ul>
      * 
-     * @see Optional#isPresent() - Checks if value exists
-     * @see Optional#get() - Retrieves the value if present
      * @see ResponseEntity#ok(Object) - Creates response with 200 status and body
      * @see ResponseEntity#notFound() - Creates builder for 404 response
      */
     @GetMapping("/{requestedId}")
     private ResponseEntity<CashCard> findById(@PathVariable Long requestedId, Principal principal) {
-        // Query the repository for the CashCard by ID and owner, returns Optional to handle null case
-        Optional<CashCard> cashCardOptional = Optional
-                .ofNullable(cashCardRepository.findByIdAndOwner(requestedId, principal.getName()));
-        
-        // If CashCard is found, return it with 200 OK status
-        if (cashCardOptional.isPresent()) {
-            return ResponseEntity.ok(cashCardOptional.get());
+
+        // Query the repository for the CashCard by ID and owner
+        CashCard cashCard = findCashCard(requestedId, principal.getName());
+        if (cashCard != null) {
+            // If CashCard is found, return it with 200 OK status
+            return ResponseEntity.ok(cashCard);
         } else {
             // If no CashCard found, return 404 Not Found
             return ResponseEntity.notFound().build();
@@ -113,14 +110,14 @@ class CashCardController {
         // Create a new CashCard with the owner set to the authenticated user's principal
         CashCard cashCardWithOwner =
                 new CashCard(null, newCashCardRequest.amount(), principal.getName());
-    
+
         // Save the new CashCard to the repository
         CashCard savedCashCard = cashCardRepository.save(cashCardWithOwner);
-        
+
         // Build the URI for the new resource: /cashcards/{id}
         URI locationOfNewCashCard =
                 ucb.path("cashcards/{id}").buildAndExpand(savedCashCard.id()).toUri();
-        
+
         // Return 201 Created status with Location header
         return ResponseEntity.created(locationOfNewCashCard).build();
     }
@@ -139,17 +136,106 @@ class CashCardController {
     @GetMapping
     private ResponseEntity<List<CashCard>> findAll(Pageable pageable, Principal principal) {
         // Query the repository for CashCards by owner, with pagination and sorting support
-        Page<CashCard> page = cashCardRepository.findByOwner(principal.getName(),
-            PageRequest.of(
-                // 
+        Page<CashCard> page = cashCardRepository.findByOwner(principal.getName(), PageRequest.of(
+                //
                 pageable.getPageNumber(),
                 // Number of items per page
-                pageable.getPageSize(), 
+                pageable.getPageSize(),
                 // Sort by amount in ascending order if not specified
-                pageable.getSortOr(Sort.by(Sort.Direction.ASC, "amount"))
-            ));
+                pageable.getSortOr(Sort.by(Sort.Direction.ASC, "amount"))));
         // Return 200 OK with the list of CashCards
         return ResponseEntity.ok(page.getContent());
+    }
+
+    /**
+     * Updates an existing CashCard with new data while preserving ownership.
+     * 
+     * <p>
+     * This endpoint handles PUT requests to modify CashCard records. It ensures:
+     * <ul>
+     * <li>Only the card owner can perform updates</li>
+     * <li>The ID and owner cannot be modified</li>
+     * <li>Only the amount field can be updated</li>
+     * </ul>
+     * </p>
+     *
+     * @param requestedId the ID of the CashCard to update
+     * @param cashCardUpdate the new CashCard data from request body
+     * @param principal the authenticated user's principal containing ownership information
+     * @return {@link ResponseEntity} containing:
+     *         <ul>
+     *         <li>204 NO_CONTENT if update successful</li>
+     *         <li>404 NOT_FOUND if card doesn't exist or user doesn't own it</li>
+     *         </ul>
+     */
+    @PutMapping("/{requestedId}")
+    private ResponseEntity<Void> putCashCard(@PathVariable Long requestedId,
+            @RequestBody CashCard cashCardUpdate, Principal principal) {
+        // First check if the card exists and belongs to the user
+        CashCard existingCard = findCashCard(requestedId, principal.getName());
+        if (existingCard == null) {
+            // Return 404 if card not found or user doesn't own it
+            return ResponseEntity.notFound().build();
+        }
+
+        // Create updated card preserving ID and owner, only updating the amount
+        CashCard updatedCashCard = new CashCard(existingCard.id(), // Preserve original ID
+                cashCardUpdate.amount(), // Update amount from request
+                principal.getName() // Preserve original owner
+        );
+
+        // Save the updated card and return 204 No Content
+        cashCardRepository.save(updatedCashCard);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Deletes a CashCard if it exists and belongs to the authenticated user.
+     * 
+     * <p>
+     * This endpoint handles DELETE requests to remove CashCard records. It ensures:
+     * <ul>
+     * <li>The card exists before attempting deletion</li>
+     * <li>Only the owner can delete their own cards</li>
+     * <li>Returns 404 for non-existent cards or unauthorized access attempts</li>
+     * </ul>
+     * </p>
+     *
+     * @param id the ID of the CashCard to delete
+     * @param principal the authenticated user's principal containing ownership information
+     * @return {@link ResponseEntity} containing:
+     *         <ul>
+     *         <li>204 NO_CONTENT if deletion successful</li>
+     *         <li>404 NOT_FOUND if card doesn't exist or user doesn't own it</li>
+     *         </ul>
+     */
+    @DeleteMapping("/{id}")
+    private ResponseEntity<Void> deleteCashCard(@PathVariable Long id, Principal principal) {
+        // Check if card exists AND belongs to the authenticated user
+        if (cashCardRepository.existsByIdAndOwner(id, principal.getName())) {
+            // If authorized, delete the card
+            cashCardRepository.deleteById(id);
+            // Return 204 No Content to indicate successful deletion
+            return ResponseEntity.noContent().build();
+        }
+        // Return 404 Not Found if card doesn't exist or user doesn't own it
+        // (avoiding information disclosure about card ownership)
+        return ResponseEntity.notFound().build();
+    }
+
+    /**
+     * Helper method to find a CashCard by ID and owner. Centralizes the card lookup logic to avoid
+     * repetition and ensure consistent authorization checks across endpoints.
+     *
+     * @param id the unique identifier of the requested CashCard
+     * @param owner the username of the authenticated user
+     * @return the matching CashCard if found and owned by the user, null otherwise
+     * @see CashCardRepository#findByIdAndOwner
+     */
+    private CashCard findCashCard(Long id, String owner) {
+        // Query the repository for the CashCard by ID and owner
+        CashCard cashCard = cashCardRepository.findByIdAndOwner(id, owner);
+        return cashCard;
     }
 
 }
