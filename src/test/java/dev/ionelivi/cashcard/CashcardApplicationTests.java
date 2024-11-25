@@ -8,7 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import static org.assertj.core.api.Assertions.assertThat;
 import java.net.URI;
 
@@ -22,8 +23,11 @@ import java.net.URI;
  *                 'webEnvironment' set to RANDOM_PORT to avoid port conflicts. It starts up an
  *                 actual Spring Boot application context, loading all configurations, components,
  *                 and beans for integration testing.
+ * @see org.springframework.boot.test.context.SpringBootTest
+ * @see org.springframework.test.annotation.DirtiesContext
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
 class CashcardApplicationTests {
 
 	/**
@@ -42,6 +46,9 @@ class CashcardApplicationTests {
 	 * 3.The JSON structure matches the expected format
 	 *
 	 * @Test - JUnit annotation marking this as a test method
+	 * @see org.springframework.boot.test.web.client.TestRestTemplate#getForEntity
+	 * @see org.springframework.http.ResponseEntity
+	 * @see com.jayway.jsonpath.JsonPath
 	 */
 	@Test
 	void shouldReturnACashCardWhenDataIsSaved() {
@@ -71,6 +78,8 @@ class CashcardApplicationTests {
 	 * resources don't exist in the system.
 	 *
 	 * @Test - JUnit annotation marking this as a test method
+	 * @see org.springframework.boot.test.web.client.TestRestTemplate#getForEntity
+	 * @see org.springframework.http.HttpStatus#NOT_FOUND
 	 */
 	@Test
 	void shouldNotReturnACashCardWithAnUnknownId() {
@@ -93,8 +102,13 @@ class CashcardApplicationTests {
 	 * 4. The newly created resource can be retrieved via GET request
 	 *
 	 * @Test - JUnit annotation marking this as a test method
+	 * @see org.springframework.boot.test.web.client.TestRestTemplate#postForEntity
+	 * @see org.springframework.http.ResponseEntity
+	 * @see org.springframework.http.HttpStatus#CREATED
+	 * @see com.jayway.jsonpath.JsonPath
 	 */
 	@Test
+	//@DirtiesContext
 	void shouldCreateANewCashCard() {
 		// Create a new CashCard instance with null ID (server will assign) and $250 amount
 		CashCard newCashCard = new CashCard(null, 250.00);
