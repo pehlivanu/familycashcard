@@ -38,6 +38,8 @@ The tests are implemented using Spring Boot's testing support and RestTemplate.
 ## Postman Collection
 A Postman collection is available for testing the API endpoints. It includes requests for all CRUD operations, with tests that mirror the CashcardApplicationTests.
 
+[Download the Postman Collection](src/main/resources/CashCard_postman_collection.json)
+
 ## Building and Running
 
 ### Prerequisites
@@ -70,7 +72,6 @@ Run specific test class:
 ```
 ./gradlew test --tests dev.ionelivi.cashcard.CashcardApplicationTests
 ```
-
 
 View test results:
 - HTML report: `build/reports/tests/test/index.html`
@@ -147,5 +148,44 @@ When using IDE extensions, you can:
 - Debug test execution
 - View detailed task execution logs
 - Monitor dependency resolution
+
+## Upgrading Spring Boot with OpenRewrite
+
+This project uses OpenRewrite to automate the upgrade process for Spring Boot. OpenRewrite provides a set of recipes that can refactor your codebase to be compatible with newer versions of Spring Boot.
+
+### Steps to Upgrade
+
+1. **Add OpenRewrite Plugin**: Ensure the OpenRewrite plugin is included in your `build.gradle` file.
+
+2. **Configure OpenRewrite**: Specify the active recipe for upgrading Spring Boot in your `build.gradle`:
+   ```gradle
+   rewrite {
+       activeRecipe 'org.openrewrite.java.spring.boot3.UpgradeSpringBoot_3_3'
+       setExportDatatables true
+   }
+   ```
+
+3. **Run OpenRewrite**: Execute the following Gradle command to apply the OpenRewrite recipe:
+   ```
+   ./gradlew rewriteRun
+   ```
+
+4. **Review Changes**: After running the command, review the changes made by OpenRewrite to ensure they align with your project's requirements.
+
+5. **Test Your Application**: Thoroughly test your application to verify that it functions correctly with the updated Spring Boot version.
+
+### Additional OpenRewrite Tasks
+
+- **Discover Available Recipes**: Use the `rewriteDiscover` task to list all available OpenRewrite recipes that can be applied to your project. This helps in identifying potential refactoring opportunities.
+  ```
+  ./gradlew rewriteDiscover
+  ```
+
+- **Dry Run of Recipes**: The `rewriteDryRun` task allows you to simulate the application of OpenRewrite recipes without making actual changes to your codebase. This is useful for previewing the impact of the recipes.
+  ```
+  ./gradlew rewriteDryRun
+  ```
+
+By following these steps and utilizing these tasks, you can efficiently upgrade and maintain your application using OpenRewrite.
 
 
