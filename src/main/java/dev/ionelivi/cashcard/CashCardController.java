@@ -234,8 +234,7 @@ class CashCardController {
      */
     private CashCard findCashCard(Long id, String owner) {
         // Query the repository for the CashCard by ID and owner
-        CashCard cashCard = cashCardRepository.findByIdAndOwner(id, owner);
-        return cashCard;
+        return cashCardRepository.findByIdAndOwner(id, owner);
     }
 
 }
